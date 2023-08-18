@@ -2,7 +2,7 @@ import unittest
 import pathlib
 import torch
 import torch.utils.data as pt
-from pytorch.dataset.tar import MultipleTarDataset
+from dataset.tar.pytorch import MultipleTarDataset
 
 
 class TestMultipleTarDataset(unittest.TestCase):

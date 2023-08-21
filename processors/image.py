@@ -17,6 +17,10 @@ class FIT:
 SIZE_TYPE = int | tuple[int, int]
 
 
+def _i(x: float) -> int:
+    return math.ceil(x)
+
+
 class ImageProcessor:
     def __init__(self, image: io.BytesIO):
         self.img = Image.open(image).convert('RGB')
@@ -56,7 +60,7 @@ class ImageProcessor:
         bottom = (h + sh) / 2
 
         return self.from_image(
-            self.img.crop((int(left), int(top), int(right), int(bottom)))
+            self.img.crop((_i(left), _i(top), _i(right), _i(bottom)))
         )
 
     def padding(self, size: SIZE_TYPE) -> ImageProcessor:
@@ -81,19 +85,19 @@ class ImageProcessor:
         if fit == FIT.CONTAIN:
             ratio = min(sw / w, sh / h)
             return self.from_image(
-                self.img.resize((math.ceil(w * ratio), math.ceil(h * ratio)))
+                self.img.resize((_i(w * ratio), _i(h * ratio)))
             ).padding((sw, sh))
 
         if fit == FIT.COVER:
             ratio = max(sw / w, sh / h)
             return self.from_image(
-                self.img.resize((int(w * ratio), int(h * ratio)))
+                self.img.resize((_i(w * ratio), _i(h * ratio)))
             ).center_crop((sw, sh))
 
         if fit == FIT.SCALE_DOWN:
             ratio = min(1, int(min(sw / w, sh / h)))
             return self.from_image(
-                self.img.resize((int(w * ratio), int(h * ratio)))
+                self.img.resize((_i(w * ratio), _i(h * ratio)))
             ).padding((sw, sh))
 
         raise ValueError(f'invalid fit value {fit}')

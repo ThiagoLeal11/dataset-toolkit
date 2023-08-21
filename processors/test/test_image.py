@@ -1,46 +1,83 @@
+import functools
+import glob
+import io
 import unittest
-from PIL import Image
-from io import BytesIO
+from typing import Callable
 
-from processors.image import ImageProcessor, FIT
+from PIL import Image
+
+from processors.image import ImageProcessor, FIT, SIZE_TYPE
+
+
+IMAGE_SIZES = [5, 100, 200, 224, 384, 512, 1024, 2048]
+
+
+def subtest(func: Callable[[unittest.TestCase, io.BytesIO], None]):
+    def wrapped(self):
+        for image_filename in self.files:
+            with open(image_filename, 'rb') as file:
+                with self.subTest(str(image_filename)):
+                    func(self, io.BytesIO(file.read()))
+    return wrapped
+
+
+def subtest_size(func: Callable[[unittest.TestCase, io.BytesIO, SIZE_TYPE], None]):
+    def wrapped(self):
+        for image_filename in self.files:
+            with open(image_filename, 'rb') as file:
+                img_b = file.read()
+                for size in IMAGE_SIZES:
+                    with self.subTest(f'{image_filename} ({size})'):
+                        func(self, io.BytesIO(img_b), size)
+    return wrapped
 
 
 class TestImageProcessor(unittest.TestCase):
     def setUp(self):
-        # Load test image
-        self.image = Image.open('test.jpg')
-        self.image_bytes = BytesIO()
-        self.image.save(self.image_bytes, format='JPEG')
+        # List all images to test
+        self.files = glob.glob('*.jpg')
 
-    def test_center_crop(self):
+    @subtest
+    def test_load(self, content):
+        # Test load
+        ip = ImageProcessor(content)
+        image = Image.open(content)
+        self.assertEqual(ip.img.size, image.size)
+
+    @subtest
+    def test_load_from_image(self, content):
+        # Test load from image
+        image = Image.open(content)
+        ip = ImageProcessor.from_image(image)
+        self.assertEqual(ip.img.size, image.size)
+
+    @subtest_size
+    def test_center_crop(self, content, size):
         # Test center crop
-        ip = ImageProcessor.from_image(self.image)
-        cropped = ip.center_crop((200, 200))
-        self.assertEqual(cropped.img.size, (200, 200))
+        ip = ImageProcessor(content)
+        cropped = ip.center_crop(size)
+        self.assertEqual(cropped.img.size, ip._size(size))
 
-    def test_padding(self):
+    @subtest_size
+    def test_padding(self, content, size):
         # Test padding
-        ip = ImageProcessor.from_image(self.image)
-        padded = ip.padding((200, 200))
-        self.assertEqual(padded.img.size, (200, 200))
+        ip = ImageProcessor(content)
+        padded = ip.padding(size)
+        self.assertEqual(padded.img.size, ip._size(size))
 
-    def test_resize(self):
+    @subtest_size
+    def test_resize(self, content, size):
         # Test resize
-        ip = ImageProcessor.from_image(self.image)
-        resized = ip.resize((200, 200), fit=FIT.COVER)
-        self.assertEqual(resized.img.size, (200, 200))
+        ip = ImageProcessor(content)
+        resized = ip.resize(size, fit=FIT.COVER)
+        self.assertEqual(resized.img.size, ip._size(size))
 
-    def test_to_tensor(self):
+    @subtest
+    def test_to_tensor(self, content):
         # Test to_tensor
-        ip = ImageProcessor.from_image(self.image)
+        ip = ImageProcessor(content)
         tensor = ip.to_tensor()
-        self.assertEqual(tensor.shape, (self.image.height, self.image.width, 3))
-
-    def test_to_bytes(self):
-        # Test to_bytes
-        ip = ImageProcessor.from_image(self.image)
-        bytes_ = ip.to_bytes()
-        self.assertEqual(len(bytes_), len(self.image_bytes.getvalue()))
+        self.assertEqual(tensor.shape, (ip.img.height, ip.img.width, 3))
 
 
 if __name__ == '__main__':

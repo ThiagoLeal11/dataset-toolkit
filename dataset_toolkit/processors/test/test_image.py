@@ -1,4 +1,3 @@
-import functools
 import glob
 import io
 import unittest
@@ -6,7 +5,7 @@ from typing import Callable
 
 from PIL import Image
 
-from processors.image import ImageProcessor, FIT, SIZE_TYPE
+from dataset_toolkit.processors.image import ImageProcessor, FIT, SIZE_TYPE
 
 
 IMAGE_SIZES = [5, 100, 200, 224, 384, 512, 1024, 2048]
